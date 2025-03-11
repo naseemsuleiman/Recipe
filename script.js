@@ -1,8 +1,7 @@
-let searchBtn = document.getElementById('search-btn');
-let mealList = document.getElementById('meal');
-let mealDetailsContent = document.querySelector('.meal-details-content');
-let recipeCloseBtn = document.getElementById('recipe-close-btn');
-let ingredientDropdown = document.getElementById('ingredient-dropdown');
+const searchBtn = document.getElementById('search-btn');
+const mealList = document.getElementById('meal');
+const mealDetailsContent = document.querySelector('.meal-details-content');
+const recipeCloseBtn = document.getElementById('recipe-close-btn');
 
 // Event listeners
 searchBtn.addEventListener('click', getMealList);
@@ -11,44 +10,15 @@ recipeCloseBtn.addEventListener('click', () => {
     mealDetailsContent.parentElement.classList.remove('showRecipe');
 });
 
-// Predefined list of common ingredients with more variety
-let commonIngredients = [
-    "chicken", "beef", "pork", "fish", "salmon", "tuna", "shrimp", "egg", "cheese",
-    "tomato", "potato", "onion", "garlic", "carrot", "bell pepper", "spinach", "broccoli",
-    "rice", "pasta", "bread", "flour", "milk", "butter", "cream", "yogurt", "sugar", "salt",
-    "pepper", "cinnamon", "chili", "ginger", "soy sauce", "honey", "olive oil", "vinegar",
-    "lamb", "turkey", "duck", "mushroom", "corn", "peas", "cabbage", "lettuce", "cucumber",
-    "zucchini", "eggplant", "pineapple", "mango", "coconut", "almond", "cashew", "walnut",
-    "lentils", "chickpeas", "black beans", "kidney beans", "oats", "quinoa", "barley","fries"
-];
-
-// Populate dropdown with ingredients
-function populateIngredientDropdown() {
-    commonIngredients.forEach(ingredient => {
-        let option = document.createElement('option');
-        option.value = ingredient;
-        option.textContent = ingredient.charAt(0).toUpperCase() + ingredient.slice(1);
-        ingredientDropdown.appendChild(option);
-    });
-}
-
-document.addEventListener('DOMContentLoaded', populateIngredientDropdown);
-
-// Get meal list that matches with the ingredients
+// Fetch meals based on search input
 function getMealList() {
     let searchInputTxt = document.getElementById('search-input').value.trim();
-    if (searchInputTxt === "") {
-        mealList.innerHTML = "<p>Please enter an ingredient.</p>";
-        mealList.classList.add('notFound');
-        return;
-    }
-    
     fetch(`https://www.themealdb.com/api/json/v1/1/filter.php?i=${searchInputTxt}`)
         .then(response => response.json())
         .then(data => {
             let html = "";
             if (data.meals) {
-                data.meals.slice(0, 20).forEach(meal => {
+                data.meals.forEach(meal => {
                     html += `
                         <div class="meal-item" data-id="${meal.idMeal}">
                             <div class="meal-img">
@@ -63,39 +33,131 @@ function getMealList() {
                 });
                 mealList.classList.remove('notFound');
             } else {
-                html = "<p>Sorry, we didn't find any meals with that ingredient. Try using a more general term.</p>";
+                html = "Sorry, we didn't find any meal!";
                 mealList.classList.add('notFound');
             }
             mealList.innerHTML = html;
         })
-        .catch(error => {
-            console.error("Error fetching meals:", error);
-            mealList.innerHTML = "<p>Failed to fetch meal data. Please try again later.</p>";
-        });
+        .catch(error => console.error("Error fetching meal list:", error));
 }
 
-// Get recipe of the meal
+// Fetch recipe details
 function getMealRecipe(e) {
     e.preventDefault();
-    if (e.target.matches('.recipe-btn')) {
+    if (e.target.classList.contains('recipe-btn')) {
         let mealItem = e.target.closest('.meal-item');
         fetch(`https://www.themealdb.com/api/json/v1/1/lookup.php?i=${mealItem.dataset.id}`)
             .then(response => response.json())
-            .then(data => {
-                if (data.meals) {
-                    let meal = data.meals[0];
-                    document.querySelector('.recipe-title').textContent = meal.strMeal;
-                    document.querySelector('.recipe-category').textContent = meal.strCategory;
-                    document.querySelector('.recipe-instruct p').textContent = meal.strInstructions;
-                    document.querySelector('.recipe-meal-img img').src = meal.strMealThumb;
-                    mealDetailsContent.parentElement.classList.add('showRecipe');
-                }
-            })
-            .catch(error => {
-                console.error("Error fetching recipe:", error);
-                mealDetailsContent.innerHTML = "<p>Failed to fetch recipe details. Please try again later.</p>";
-            });
+            .then(data => mealRecipeModal(data.meals[0]))
+            .catch(error => console.error("Error fetching meal recipe:", error));
     }
 }
 
+// Display recipe modal
+function mealRecipeModal(meal) {
+    let html = `
+        <h2 class="recipe-title">${meal.strMeal}</h2>
+        <p class="recipe-category"><strong>Category:</strong> ${meal.strCategory}</p>
+        <div class="recipe-instruct">
+            <h3>Instructions:</h3>
+            <p>${meal.strInstructions}</p>
+        </div>
+        <div class="recipe-meal-img">
+            <img src="${meal.strMealThumb}" alt="">
+        </div>
+        
+        <div id="rating-container">
+            <div class="star-rating" id="star-rating">
+                ${[5, 4, 3, 2, 1].map(star => `<span class="star" data-value="${star}">★</span>`).join("")}
+            </div>
+            <p id="user-rating">No rating yet</p>
+        </div>
+        <a href="shopping.html" id="ingredients">Get ingredients</a>
+        <div id="share-container">
+            <h3>Share this Recipe:</h3>
+            <a href="#" id="share-facebook"><i class="fab fa-facebook"></i></a>
+            <a href="#" id="share-twitter"><i class="fab fa-twitter"></i></a>
+            <a href="#" id="share-whatsapp"><i class="fab fa-whatsapp"></i></a>
+            <a href="#" id="share-email"><i class="fas fa-envelope"></i></a>
+        </div>
+        <button id="save-recipe">Save Recipe</button>
+    `;
+    mealDetailsContent.innerHTML = html;
+    mealDetailsContent.parentElement.classList.add('showRecipe');
 
+    document.getElementById("save-recipe").addEventListener("click", () => saveRecipe(meal));
+    setupStarRating(meal.idMeal);
+    setupSocialSharing(meal);
+}
+
+    function checkForSelectedRecipe() {
+        const mealData = localStorage.getItem("selectedMeal");
+        if (mealData) {
+            const meal = JSON.parse(mealData);
+            mealRecipeModal(meal);  // Call the function that displays the recipe
+            localStorage.removeItem("selectedMeal"); // Clear it to avoid showing it every time
+        }
+    }
+
+    window.addEventListener("load", checkForSelectedRecipe);
+
+
+// Save recipe to local storage
+function saveRecipe(meal) {
+    let savedRecipes = JSON.parse(localStorage.getItem("savedRecipes")) || [];
+    if (savedRecipes.some(recipe => recipe.idMeal === meal.idMeal)) {
+        alert("This recipe is already saved!");
+        return;
+    }
+    savedRecipes.push(meal);
+    localStorage.setItem("savedRecipes", JSON.stringify(savedRecipes));
+    alert("Recipe saved successfully!");
+}
+
+// Star rating system
+function setupStarRating(mealId) {
+    const stars = document.querySelectorAll(".star");
+    const userRatingText = document.getElementById("user-rating");
+    const savedRating = localStorage.getItem(`recipeRating_${mealId}`);
+    if (savedRating) {
+        highlightStars(savedRating);
+        userRatingText.textContent = `Your rating: ${savedRating} stars`;
+    }
+
+    stars.forEach(star => {
+        star.addEventListener("click", function () {
+            const rating = this.getAttribute("data-value");
+            localStorage.setItem(`recipeRating_${mealId}`, rating);
+            highlightStars(rating);
+            userRatingText.textContent = `Your rating: ${rating} stars`;
+        });
+    });
+
+    function highlightStars(rating) {
+        stars.forEach(star => {
+            star.classList.toggle("selected", star.getAttribute("data-value") <= rating);
+        });
+    }
+}
+
+// Social sharing functionality
+function setupSocialSharing(meal) {
+    const recipeUrl = window.location.href;
+    const shareText = `Check out this recipe: ${meal.strMeal}`;
+    
+    document.getElementById("share-facebook").addEventListener("click", () => {
+        window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(recipeUrl)}`, "_blank");
+    });
+
+    document.getElementById("share-twitter").addEventListener("click", () => {
+        window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(recipeUrl)}`, "_blank");
+    });
+
+    document.getElementById("share-whatsapp").addEventListener("click", () => {
+        window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(shareText + " " + recipeUrl)}`, "_blank");
+    });
+
+    document.getElementById("share-email").addEventListener("click", () => {
+        window.location.href = `mailto:?subject=${encodeURIComponent("Try this recipe!")}&body=${encodeURIComponent(shareText + " " + recipeUrl)}`;
+    });
+}

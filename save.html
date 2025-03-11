@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Saved Recipes</title>
+    <link rel="stylesheet" href="save.css">
+</head>
+<body>
+    <header><h1>Saved Recipes</h1></header>
+
+    <div id="saved-recipes" class="container">
+        <p>Loading saved recipes...</p>
+    </div>
+
+    <a href="index.html">Back to Recipes</a>
+
+        <script>
+    function loadSavedRecipes() {
+        const savedRecipes = JSON.parse(localStorage.getItem("savedRecipes")) || [];
+        const container = document.getElementById("saved-recipes");
+
+        if (savedRecipes.length === 0) {
+            container.innerHTML = "<p>No saved recipes yet.</p>";
+            return;
+        }
+
+        container.innerHTML = "";
+
+        savedRecipes.forEach(meal => {
+            if (!meal || !meal.idMeal) return;
+
+            const recipeEl = document.createElement("div");
+            recipeEl.classList.add("recipe-card");
+            recipeEl.innerHTML = `
+                <img src="${meal.strMealThumb}" alt="${meal.strMeal}" width="150">
+                <h3>${meal.strMeal}</h3>
+                <p><strong>Category:</strong> ${meal.strCategory}</p>
+                <button class="view-recipe" data-id="${meal.idMeal}">View Recipe</button>
+                <button class="remove-recipe" data-id="${meal.idMeal}">Remove</button>
+            `;
+            container.appendChild(recipeEl);
+        });
+
+        document.querySelectorAll(".view-recipe").forEach(button => {
+            button.addEventListener("click", (event) => {
+                const mealId = event.target.dataset.id;
+                const meal = savedRecipes.find(m => m.idMeal === mealId);
+
+                if (meal) {
+                    localStorage.setItem("selectedMeal", JSON.stringify(meal)); // Save full meal object
+                    window.location.href = "index.html#selected-recipe";
+                }
+            });
+        });
+
+        document.querySelectorAll(".remove-recipe").forEach(button => {
+            button.addEventListener("click", (event) => {
+                removeRecipe(event.target.dataset.id);
+            });
+        });
+    }
+
+    function removeRecipe(mealId) {
+        let savedRecipes = JSON.parse(localStorage.getItem("savedRecipes")) || [];
+        savedRecipes = savedRecipes.filter(meal => meal.idMeal !== mealId);
+        localStorage.setItem("savedRecipes", JSON.stringify(savedRecipes));
+        loadSavedRecipes();
+    }
+
+    loadSavedRecipes();
+</script>
+
+</body>
+</html>
+
