@@ -10,35 +10,58 @@ recipeCloseBtn.addEventListener('click', () => {
     mealDetailsContent.parentElement.classList.remove('showRecipe');
 });
 
+// Load random meals on page load
+document.addEventListener("DOMContentLoaded", getRandomMeals);
+
+// Fetch random meals
+function getRandomMeals() {
+    mealList.innerHTML = `<p>Loading meals...</p>`;
+    fetch(`https://www.themealdb.com/api/json/v1/1/search.php?s=`)
+        .then(response => response.json())
+        .then(data => {
+            displayMeals(data.meals);
+        })
+        .catch(error => {
+            console.error("Error fetching random meals:", error);
+            mealList.innerHTML = `<p>Failed to load meals. Try refreshing.</p>`;
+        });
+}
+
 // Fetch meals based on search input
 function getMealList() {
     let searchInputTxt = document.getElementById('search-input').value.trim();
+    if (searchInputTxt === "") {
+        return getRandomMeals(); // Reload random meals if search is empty
+    }
     fetch(`https://www.themealdb.com/api/json/v1/1/filter.php?i=${searchInputTxt}`)
         .then(response => response.json())
         .then(data => {
-            let html = "";
             if (data.meals) {
-                data.meals.forEach(meal => {
-                    html += `
-                        <div class="meal-item" data-id="${meal.idMeal}">
-                            <div class="meal-img">
-                                <img src="${meal.strMealThumb}" alt="food">
-                            </div>
-                            <div class="meal-name">
-                                <h3>${meal.strMeal}</h3>
-                                <a href="#" class="recipe-btn">Get Recipe</a>
-                            </div>
-                        </div>
-                    `;
-                });
-                mealList.classList.remove('notFound');
+                displayMeals(data.meals);
             } else {
-                html = "Sorry, we didn't find any meal!";
-                mealList.classList.add('notFound');
+                mealList.innerHTML = `<p>Sorry, no meals found for "${searchInputTxt}"</p>`;
             }
-            mealList.innerHTML = html;
         })
-        .catch(error => console.error("Error fetching meal list:", error));
+        .catch(error => {
+            console.error("Error fetching meal list:", error);
+            mealList.innerHTML = `<p>Something went wrong. Try again.</p>`;
+        });
+}
+
+// Display meals on the page
+function displayMeals(meals) {
+    let html = meals.map(meal => `
+        <div class="meal-item" data-id="${meal.idMeal}">
+            <div class="meal-img">
+                <img src="${meal.strMealThumb}" alt="food">
+            </div>
+            <div class="meal-name">
+                <h3>${meal.strMeal}</h3>
+                <a href="#" class="recipe-btn">Get Recipe</a>
+            </div>
+        </div>
+    `).join("");
+    mealList.innerHTML = html;
 }
 
 // Fetch recipe details
@@ -52,6 +75,39 @@ function getMealRecipe(e) {
             .catch(error => console.error("Error fetching meal recipe:", error));
     }
 }
+
+// Display recipe modal
+function mealRecipeModal(meal) {
+    let html = `
+        <h2 class="recipe-title">${meal.strMeal}</h2>
+        <p class="recipe-category"><strong>Category:</strong> ${meal.strCategory}</p>
+        <div class="recipe-instruct">
+            <h3>Instructions:</h3>
+            <p>${meal.strInstructions}</p>
+        </div>
+        <div class="recipe-meal-img">
+            <img src="${meal.strMealThumb}" alt="">
+        </div>
+        <button id="save-recipe">Save Recipe</button>
+    `;
+    mealDetailsContent.innerHTML = html;
+    mealDetailsContent.parentElement.classList.add('showRecipe');
+
+    document.getElementById("save-recipe").addEventListener("click", () => saveRecipe(meal));
+}
+
+// Save recipe to local storage
+function saveRecipe(meal) {
+    let savedRecipes = JSON.parse(localStorage.getItem("savedRecipes")) || [];
+    if (savedRecipes.some(recipe => recipe.idMeal === meal.idMeal)) {
+        alert("This recipe is already saved!");
+        return;
+    }
+    savedRecipes.push(meal);
+    localStorage.setItem("savedRecipes", JSON.stringify(savedRecipes));
+    alert("Recipe saved successfully!");
+}
+
 
 // Display recipe modal
 function mealRecipeModal(meal) {
