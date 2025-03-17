@@ -82,38 +82,61 @@
     </div>
 
     <script>
-        $(document).ready(function() {
-            $('#showSignup').click(function() {
-                $('#loginForm').hide();
-                $('#signupForm').show();
-            });
-            $('#showLogin').click(function() {
-                $('#signupForm').hide();
-                $('#loginForm').show();
-            });
+       $(document).ready(function() {
+    $('#showSignup').click(function() {
+        $('#loginForm').hide();
+        $('#signupForm').show();
+    });
 
-            $('#loginBtn').click(function() {
-                let email = $('#loginEmail').val();
-                let password = $('#loginPassword').val();
-                if (email === '' || password === '') {
-                    alert('Please fill all fields');
-                } else {
-                    alert('Login successful');
-                    window.location.href = 'index.html';
-                }
-            });
+    $('#showLogin').click(function() {
+        $('#signupForm').hide();
+        $('#loginForm').show();
+    });
 
-            $('#signupBtn').click(function() {
-                let email = $('#signupEmail').val();
-                let password = $('#signupPassword').val();
-                if (email === '' || password === '') {
-                    alert('Please fill all fields');
-                } else {
-                    alert('Signup successful');
-                    window.location.href = 'index.html';
-                }
-            });
-        });
+    function isValidEmail(email) {
+        let regex = /^[^\s@]+@[^\s@]+$/;
+        return regex.test(email);
+    }
+
+    $('#signupBtn').click(function() {
+        let email = $('#signupEmail').val().trim();
+        let password = $('#signupPassword').val().trim();
+
+        if (email === '' || password === '') {
+            alert('Please fill all fields');
+        } else if (!isValidEmail(email)) {
+            alert('Invalid email format');
+        } else if (password.length < 6) {
+            alert('Password must be at least 6 characters long');
+        } else {
+            // Store user credentials in localStorage (for demo purposes)
+            localStorage.setItem('userEmail', email);
+            localStorage.setItem('userPassword', password);
+            alert('Signup successful! You can now log in.');
+            $('#signupForm').hide();
+            $('#loginForm').show();
+        }
+    });
+
+    $('#loginBtn').click(function() {
+        let email = $('#loginEmail').val().trim();
+        let password = $('#loginPassword').val().trim();
+
+        // Retrieve stored credentials
+        let storedEmail = localStorage.getItem('userEmail');
+        let storedPassword = localStorage.getItem('userPassword');
+
+        if (email === '' || password === '') {
+            alert('Please fill all fields');
+        } else if (email !== storedEmail || password !== storedPassword) {
+            alert('Incorrect email or password. Please sign up first.');
+        } else {
+            alert('Login successful');
+            window.location.href = 'index.html';
+        }
+    });
+});
+
     </script>
 </body>
 </html>
